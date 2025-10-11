@@ -1,0 +1,96 @@
+#include <Servo.h>
+#include <Adafruit_NeoPixel.h>
+
+// 舵机和灯带定义
+Servo servo1;
+Servo servo2;
+#define SERVO1_PIN 9
+#define SERVO2_PIN 12
+#define LED_PIN    6
+#define NUM_LEDS   28
+
+Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
+
+// 控制变量
+unsigned long lastServo1Move = 0;
+int servo1Pos = 5;
+int servo1Dir = 1;
+
+unsigned long lastServo2StateChange = 0;
+int servo2State = 0; // 0: 30°  1:→60°  2:→5°  3:→30°
+
+int breathBrightness = 0;
+int breathStep = 5;
+unsigned long lastBreath = 0;
+
+// 平滑移动函数
+void smoothMove(Servo& servo, int from, int to, int stepDelay = 10) {
+  if (from == to) return;
+  int step = (from < to) ? 1 : -1;
+  for (int pos = from; pos != to; pos += step) {
+    servo.write(pos);
+    delay(stepDelay);
+  }
+  servo.write(to);
+}
+
+void setup() {
+  servo1.attach(SERVO1_PIN);
+  servo2.attach(SERVO2_PIN);
+  strip.begin();
+  strip.show();
+
+  servo1.write(servo1Pos);
+  servo2.write(30);  // 初始位置
+  lastServo2StateChange = millis();
+}
+
+void loop() {
+  unsigned long now = millis();
+
+  // --- 舵机1：来回转动 ---
+  if (now - lastServo1Move >= 40) {
+    servo1.write(servo1Pos);
+    servo1Pos += servo1Dir;
+    if (servo1Pos >= 175 || servo1Pos <= 5) {
+      servo1Dir *= -1;
+    }
+    lastServo1Move = now;
+  }
+
+  // --- 舵机2：状态机控制动作 ---
+  switch (servo2State) {
+    case 0: // 保持30° 40秒
+      if (now - lastServo2StateChange >= 40000) {
+        smoothMove(servo2, 30, 60, 10);
+        lastServo2StateChange = millis();
+        servo2State = 1;
+      }
+      break;
+    case 1: // 保持60° 10秒
+      if (now - lastServo2StateChange >= 10000) {
+        smoothMove(servo2, 60, 5, 10);
+        lastServo2StateChange = millis();
+        servo2State = 2;
+      }
+      break;
+    case 2: // 保持5° 10秒
+      if (now - lastServo2StateChange >= 10000) {
+        smoothMove(servo2, 5, 30, 10);
+        lastServo2StateChange = millis();
+        servo2State = 0;
+      }
+      break;
+  }
+
+  // --- WS2812B 呼吸灯 ---
+  if (now - lastBreath >= 30) {
+    strip.fill(strip.Color(breathBrightness, 0, 0));
+    strip.show();
+    breathBrightness += breathStep;
+    if (breathBrightness >= 255 || breathBrightness <= 0) {
+      breathStep *= -1;
+    }
+    lastBreath = now;
+  }
+}
