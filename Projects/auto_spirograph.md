@@ -1,4 +1,4 @@
-**Automatic Spirograph Box **
+**Automatic Spirograph Box**
 ---
 
 ## Overview
