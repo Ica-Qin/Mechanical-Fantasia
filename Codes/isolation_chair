@@ -1,0 +1,251 @@
+#include <Arduino.h>//压感器
+#include<Wire.h>//舵机
+#include<Adafruit_PWMServoDriver.h>//舵机驱动
+Adafruit_PWMServoDriver pwm1 = Adafruit_PWMServoDriver();//连接舵机驱动
+Adafruit_PWMServoDriver pwm2 = Adafruit_PWMServoDriver(0x41);
+void Servo_Close1();//所有舵机停转
+int sensor1 = A0;//连接压感器
+int sensor2 = A1;
+int sensor3 = A2;
+int sensor4 = A3;
+int sensor5 = A6;
+
+#define PRESS_MIN 20//设置压感器值域
+#define PRESS_MAX 6000
+#define VOLTAGE_MIN 100
+#define VOLTAGE_MAX 3300
+
+void setServoPulse(uint8_t n, double pulse){
+  double pulselength;
+  pulselength = 1000000; // 1,000,000 us per second
+  pulselength /= 60; // 60           
+  //Serial.print(pulselength); Serial.println(" us per period");
+  pulselength /= 4096; // 12 bits of resolution
+  //Serial.print(pulselength); Serial.println(" us per bit");
+  pulse *= 1000;
+  pulse /= pulselength;
+  //Serial.println(pulse);
+  }
+
+long getPressValue(int pin)
+{
+  long PRESS_AO = 0;
+  int VOLTAGE_AO = 0;
+  int value = analogRead(pin);
+  VOLTAGE_AO = map(value, 0, 1023, 0, 5000);
+  if(VOLTAGE_AO < VOLTAGE_MIN)
+  {
+    PRESS_AO = 0;
+  }
+  else if(VOLTAGE_AO > VOLTAGE_MAX)
+  {
+    PRESS_AO = PRESS_MAX;
+  }
+  else
+  {
+    PRESS_AO = map(VOLTAGE_AO, VOLTAGE_MIN, VOLTAGE_MAX, PRESS_MIN, PRESS_MAX);
+  }
+  return PRESS_AO;
+}
+
+bool flag_press1= true;
+bool flag_press2= true;
+bool flag_press3= true;
+bool flag_press4= true;
+bool flag_press5= true;
+bool flag_chair1= true;
+bool flag_chair2= true;
+
+void setup() {
+  Serial.begin(10600);
+  Serial.println("test!");
+  pwm1.begin();
+  pwm1.setPWMFreq(60);
+  pwm2.begin();
+  pwm2.setPWMFreq(60);
+  setServoPulse(0, 0.001);
+}
+
+void loop() {
+  long press1 = getPressValue(sensor1);
+  long press2 = getPressValue(sensor2);
+  long press3 = getPressValue(sensor3);
+  long press4 = getPressValue(sensor4);
+  long press5 = getPressValue(sensor5);
+  if (press1 > 1000){flag_press1= true;}
+  else if (press1 < 100){flag_press1= false;}
+  
+  if (press2 > 1000){flag_press2= true;}
+  else if (press2 < 100){flag_press2= false;}
+  
+  if (press3 > 1000){flag_press3= true;}
+  else if (press3 < 100){flag_press3= false;}
+  
+  if (press4 > 1000){flag_press4= true;}
+  else if (press4 < 100){flag_press4= false;}
+  
+  if (press5 > 1000){flag_press5= true;}
+  else if (press5 < 100){flag_press5= false;}
+  
+  if (flag_press1== true && flag_chair1== true && flag_press2== false){
+    for(int i = 6; i <= 8; i++){
+     pwm1.setPWM(i, 0, 542);}
+     pwm1.setPWM(5, 0, 427);
+     pwm1.setPWM(9, 0, 427);
+     pwm1.setPWM(4, 0, 394);
+     pwm1.setPWM(10, 0, 394);
+     delay(4200);
+     for(int i=1;i<=13;i++){
+     pwm1.setPWM(i, 0, 1500);//chair1&2不动
+     pwm2.setPWM(i, 0, 1500);
+     }
+     flag_chair1 = false;
+  }
+  else if (flag_press2== true && flag_chair1== false && flag_chair2== true){
+     for(int i = 6; i <= 8; i++){
+      pwm2.setPWM(i, 0, 542);}
+      pwm2.setPWM(5, 0, 427);
+      pwm2.setPWM(9, 0, 427);
+      pwm2.setPWM(4, 0, 394);
+      pwm2.setPWM(10, 0, 394);
+      delay(4200);
+      for(int i=1;i<=13;i++){
+      pwm1.setPWM(i, 0, 1500);//chair1&2不动
+      pwm2.setPWM(i, 0, 1500);
+      }
+      flag_chair2 = false;
+  }
+  else if (flag_press3== true && flag_chair2== true && flag_press2== false){
+    for(int i = 6; i <= 8; i++){
+     pwm2.setPWM(i, 0, 542);}
+     pwm2.setPWM(5, 0, 427);
+     pwm2.setPWM(9, 0, 427);
+     pwm2.setPWM(4, 0, 394);
+     pwm2.setPWM(10, 0, 394);
+     delay(4200);
+     for(int i=1;i<=13;i++){
+     pwm1.setPWM(i, 0, 1500);
+     pwm2.setPWM(i, 0, 1500);}
+     flag_chair2 = false;
+  }
+  else if (flag_press2== true && flag_chair2== false && flag_chair1== true){
+     for(int i = 6; i <= 8; i++){
+      pwm1.setPWM(i, 0, 542);}
+      pwm1.setPWM(5, 0, 427);
+      pwm1.setPWM(9, 0, 427);
+      pwm1.setPWM(4, 0, 394);
+      pwm1.setPWM(10, 0, 394);
+      delay(4200);
+      for(int i=1;i<=13;i++){
+      pwm1.setPWM(i, 0, 1500);//chair1&2不动
+      pwm2.setPWM(i, 0, 1500);
+      }
+      flag_chair1 = false;
+  }
+  else if (flag_press2== true && flag_chair1== true && flag_chair2== true){
+     for(int i = 6; i <= 8; i++){
+      pwm1.setPWM(i, 0, 542);
+      pwm2.setPWM(i, 0, 542);}
+      pwm1.setPWM(5, 0, 427);
+      pwm2.setPWM(5, 0, 427);
+      pwm1.setPWM(9, 0, 427);
+      pwm2.setPWM(9, 0, 427);
+      pwm1.setPWM(4, 0, 394);
+      pwm2.setPWM(4, 0, 394);
+      pwm1.setPWM(10, 0, 394);
+      pwm2.setPWM(10, 0, 394);
+      delay(4200);
+      for(int i=1;i<=13;i++){
+      pwm1.setPWM(i, 0, 1500);
+      pwm2.setPWM(i, 0, 1500);
+     }
+     flag_chair1 = false;
+     flag_chair2 = false;
+  }
+
+  else if (flag_press1== false && flag_chair1== false && flag_press4== false && flag_press2== false){
+     for(int i = 6; i <= 8; i++){
+      pwm1.setPWM(i, 0, 262);}
+      pwm1.setPWM(5, 0, 324);
+      pwm1.setPWM(9, 0, 324);
+      pwm1.setPWM(4, 0, 347);
+      pwm1.setPWM(10, 0, 347);    
+      delay(4200);
+      for(int i = 1;i<=13;i++){
+      pwm1.setPWM(i, 0, 1500);//chair1&2不动
+      pwm2.setPWM(i, 0, 1500);
+      }
+      flag_chair1 = true;
+  }
+  else if (flag_press3== false && flag_chair2== false && flag_press5== false && flag_press2== false){
+     for(int i = 6; i <= 8; i++){
+      pwm2.setPWM(i, 0, 262);}
+      pwm2.setPWM(5, 0, 324);
+      pwm2.setPWM(9, 0, 324);
+      pwm2.setPWM(4, 0, 347);
+      pwm2.setPWM(10, 0, 347);    
+      delay(4200);
+      for(int i = 1;i<=13;i++){
+      pwm1.setPWM(i, 0, 1500);//chair1&2不动
+      pwm2.setPWM(i, 0, 1500);
+      }
+      flag_chair2 = true;
+  }
+  
+  else if (flag_press1== true && flag_chair1== false){
+     for(int i=1;i<=13;i++){
+     pwm1.setPWM(i, 0, 1500);//chair1不动
+     }
+  }
+  else if (flag_press2== true && flag_chair1== false && flag_chair2== false){
+     for(int i=1;i<=13;i++){
+     pwm1.setPWM(i, 0, 1500);//chair1&2不动
+     pwm2.setPWM(i, 0, 1500);}
+  }
+   else if (flag_press3== true && flag_chair2== false){
+     for(int i=1;i<=13;i++){
+     pwm2.setPWM(i, 0, 1500);//chair2不动
+     }
+  }
+  else if (flag_press4== true && flag_chair1== false){
+     for(int i=1;i<=13;i++){
+     pwm1.setPWM(i, 0, 1500);//chair1不动
+     }
+  }
+  else if (flag_press5== true && flag_chair2== false){
+     for(int i=1;i<=13;i++){
+     pwm2.setPWM(i, 0, 1500);//chair2不动
+     }
+  }
+  else if (flag_press1== false && flag_press2== false && flag_chair1== true){
+     for(int i=1;i<=13;i++){
+     pwm1.setPWM(i, 0, 1500);//chair1不动
+     }
+  }
+  else if (flag_press1== false && flag_press2== true && flag_chair1== false){
+     for(int i=1;i<=13;i++){
+     pwm1.setPWM(i, 0, 1500);//chair1不动
+     }
+  }
+  else if (flag_press3== false && flag_press2== false && flag_chair2== true){
+     for(int i=1;i<=13;i++){
+     pwm2.setPWM(i, 0, 1500);//chair2不动
+     }
+  }
+  else if (flag_press3== false && flag_press2== true && flag_chair2== false){
+     for(int i=1;i<=13;i++){
+     pwm2.setPWM(i, 0, 1500);//chair2不动
+     }
+  }
+
+
+}
+
+void Servo_Close1()
+{
+    for(int i=1;i<=12;i++)  
+    {
+        pwm1.setPWM(i, 0, 1500);
+        pwm2.setPWM(i, 0, 1500); 
+    }
+}
